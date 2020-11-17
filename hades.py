@@ -14,7 +14,6 @@ def main():
     for (dirpath, _, filenames) in os.walk(dirName):
         listOfFiles += [os.path.join(dirpath, file) for file in filenames if file.endswith('.c')]
 
-    
     # Read all files into a list of strings
     fileStrings = list()
     for filePath in listOfFiles:
