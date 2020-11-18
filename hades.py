@@ -1,11 +1,13 @@
 from difflib import SequenceMatcher
 from multiprocessing import Pool, TimeoutError
 from typing import List
-import math
+import istarmap
 import itertools
+import math
 import os
 import pathlib
 import pprint
+import tqdm
 
 filePaths: List[str] = []
 strings: List[str] = []
@@ -16,27 +18,41 @@ def main():
     DIRNAME = './';
     NUMBER_OF_TOP_RESULTS = 20
     REPORTS_DIR = 'reports'
+    NUMBER_OF_PROCESSES = 2
 
-    runPlagiarismCheck(DIRNAME, NUMBER_OF_TOP_RESULTS, REPORTS_DIR)
+    runPlagiarismCheck(DIRNAME, NUMBER_OF_TOP_RESULTS, REPORTS_DIR, NUMBER_OF_PROCESSES)
+
 
 def sequenceMatcherWrapper(idx0, idx1):
     ratio = SequenceMatcher(junkFunction0, strings[idx0], strings[idx1]).ratio()
     return ratio, filePaths[idx0], filePaths[idx1]
 
-def runPlagiarismCheck(dirName, numberOfTopResults, reportsDir):
+
+def runPlagiarismCheck(dirName, numberOfTopResults, reportsDir, numberOfProcesses):
     global filePaths
     global strings
     filePaths = getListOfFiles(dirName)
     strings = filePathsToStrings(filePaths)
 
-    print("Comparing", len(strings), "files in",
-          math.comb(len(strings), 2), "combinations...", end='', flush=True)
+    numberOfCombinations = math.comb(len(strings), 2)
+    print('Comparing', len(strings), 'files in',
+          numberOfCombinations, 'combinations using',
+          numberOfProcesses, 'processes...', flush=True)
 
     # Create a list of tuples (ratio, filePath0, filePath1)
-    with Pool(processes=2) as pool:
+    # Uses a workaround to use tqdm with starmap
+    # Source: https://stackoverflow.com/questions/57354700/starmap-combined-with-tqdm
+    ratios = []
+    with Pool(processes=numberOfProcesses) as pool:
+        iterable = itertools.combinations(range(len(strings)), 2)
+        for result in tqdm.tqdm(pool.istarmap(sequenceMatcherWrapper, iterable),
+                                total=numberOfCombinations):
+            ratios.append(result)
+
+    ''' # For when not using tqdm to indicate progress
         ratios = pool.starmap(sequenceMatcherWrapper,
                               itertools.combinations(range(len(strings)), 2))
-    print(' Done')
+    '''
 
     # Sort to find the files which are most similar
     print('Sorting ratios...', end='', flush=True)
