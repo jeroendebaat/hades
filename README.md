@@ -1,2 +1,2 @@
-# hades
+# Hades
 Hades, a plagiarism checker
