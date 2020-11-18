@@ -25,7 +25,8 @@ def main():
     # Create a list of tuples (ratio, filePath0, filePath1)
     ratios = list()
     for i, j in itertools.combinations(range(len(fileStrings)), 2):
-        ratio = SequenceMatcher(None, fileStrings[i], fileStrings[j]).ratio()
+#        ratio = SequenceMatcher(None, fileStrings[i], fileStrings[j]).ratio()
+        ratio = SequenceMatcher(lambda c: c.isspace(), fileStrings[i], fileStrings[j]).ratio()
         tup = ratio, listOfFiles[i], listOfFiles[j]
         ratios.append(tup)
     print(' Done')
@@ -60,4 +61,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
