@@ -4,7 +4,8 @@ import multiprocessing.pool as mpp
 
 
 def istarmap(self, func, iterable, chunksize=1):
-    '''starmap-version of imap'''
+    """starmap-version of imap
+    """
     self._check_running()
     if chunksize < 1:
         raise ValueError(
