@@ -1,9 +1,16 @@
 from difflib import SequenceMatcher
+from multiprocessing import Pool, TimeoutError
+from typing import List
 import math
 import itertools
 import os
 import pathlib
 import pprint
+
+filePaths: List[str] = []
+strings: List[str] = []
+junkFunction0 = None
+junkFunction1 = lambda c: c.isspace()
 
 def main():
     DIRNAME = './';
@@ -12,8 +19,13 @@ def main():
 
     runPlagiarismCheck(DIRNAME, NUMBER_OF_TOP_RESULTS, REPORTS_DIR)
 
+def sequenceMatcherWrapper(idx0, idx1):
+    ratio = SequenceMatcher(junkFunction0, strings[idx0], strings[idx1]).ratio()
+    return ratio, filePaths[idx0], filePaths[idx1]
 
 def runPlagiarismCheck(dirName, numberOfTopResults, reportsDir):
+    global filePaths
+    global strings
     filePaths = getListOfFiles(dirName)
     strings = filePathsToStrings(filePaths)
 
@@ -21,12 +33,9 @@ def runPlagiarismCheck(dirName, numberOfTopResults, reportsDir):
           math.comb(len(strings), 2), "combinations...", end='', flush=True)
 
     # Create a list of tuples (ratio, filePath0, filePath1)
-    ratios = []
-    for i, j in itertools.combinations(range(len(strings)), 2):
-#        ratio = SequenceMatcher(None, strings[i], strings[j]).ratio()
-        ratio = SequenceMatcher(lambda c: c.isspace(), strings[i], strings[j]).ratio()
-        tup = ratio, filePaths[i], filePaths[j]
-        ratios.append(tup)
+    with Pool(processes=2) as pool:
+        ratios = pool.starmap(sequenceMatcherWrapper,
+                              itertools.combinations(range(len(strings)), 2))
     print(' Done')
 
     # Sort to find the files which are most similar
