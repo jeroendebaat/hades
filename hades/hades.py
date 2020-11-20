@@ -1,10 +1,12 @@
 """
-Hades, a plagiarism checker.
+Contains both the plagiarism checker itself, as well as
+a tool to read a YAML configuration from a file.
 """
 from difflib import SequenceMatcher
 from multiprocessing import Pool
 from typing import List
 
+from dataclasses import dataclass
 import itertools
 import math
 import os
@@ -15,14 +17,36 @@ import yaml
 
 import istarmap
 
-def main():
-    with open ('python.yaml', 'r') as file:
-        config = yaml.safe_load(file)
+@dataclass
+class Configuration():
+    """This class holds all configuration parameters"""
+    file_extensions: List[str]
+    dir_name: str
+    number_of_top_results: int
+    reports_dir: str
+    number_of_processes: int
 
+def main():
+    """Reads a configuration from file and run the plagiarism checker"""
+    config = read_configuration_from_file('python.yaml')
     hades = Hades(config)
     hades.run_plagiarism_check()
 
+def read_configuration_from_file(file_name):
+    """Reads a YAML file into a Configuration class"""
+    with open (file_name, 'r') as yamlfile:
+        config_yaml = yaml.safe_load(yamlfile)
+
+    file_extensions = config_yaml['file_extensions']
+    dir_name = config_yaml['dir_name']
+    number_of_top_results = config_yaml['number_of_top_results']
+    reports_dir = config_yaml['reports_dir']
+    number_of_processes = config_yaml['number_of_processes']
+    return Configuration(file_extensions, dir_name, number_of_top_results,
+                         reports_dir, number_of_processes)
+
 class Hades():
+    """The plagiarism checker itself"""
     __file_paths: List[str] = []
     __strings: List[str] = []
     __junk_function0 = None
@@ -30,12 +54,7 @@ class Hades():
     __ratios: List[tuple] = []
 
     def __init__(self, config):
-        self.file_extensions = config['file_extensions']
-
-        self.dir_name = config['dir_name']
-        self.number_of_top_results = config['number_of_top_results']
-        self.reports_dir = config['reports_dir']
-        self.number_of_processes = config['number_of_processes']
+        self.config = config
 
         self.best_matches = []
 
@@ -45,12 +64,12 @@ class Hades():
     def __get_list_of_files(self):
         """Get the list of all files in directory tree at given path"""
         self.__file_paths = []
-        for (dirpath, _, filenames) in os.walk(self.dir_name):
+        for (dirpath, _, filenames) in os.walk(self.config.dir_name):
             self.__file_paths += [os.path.join(dirpath, file)
                                 for file in filenames if self.__file_satisfies_conditions(file)]
 
     def __file_satisfies_conditions(self, file_name):
-        for file_extension in self.file_extensions:
+        for file_extension in self.config.file_extensions:
             if file_name.endswith(file_extension):
                 return True
         return False
@@ -80,12 +99,12 @@ class Hades():
         number_of_combinations = math.comb(len(self.__strings), 2)
         print('Comparing', len(self.__strings), 'files in',
               number_of_combinations, 'combinations using',
-              self.number_of_processes, 'processes...', flush=True)
+              self.config.number_of_processes, 'processes...', flush=True)
 
         # Create a list of tuples (ratio, file_path0, file_path1)
         # Uses a workaround to use tqdm with starmap
         # Source: https://stackoverflow.com/questions/57354700/starmap-combined-with-tqdm
-        with Pool(processes=self.number_of_processes) as pool:
+        with Pool(processes=self.config.number_of_processes) as pool:
             iterable = itertools.combinations(range(len(self.__strings)), 2)
             for result in tqdm.tqdm(pool.istarmap(self.sequence_matcher_wrapper, iterable),
                                     total=number_of_combinations):
@@ -108,12 +127,12 @@ class Hades():
         """Sorts the results and puts the best matches in best_matches"""
         print('Sorting ratios...', end='', flush=True)
         self.__ratios.sort(reverse=True)
-        self.best_matches = self.__ratios[0:self.number_of_top_results]
+        self.best_matches = self.__ratios[0:self.config.number_of_top_results]
         print(' Done')
 
     def __print_summary(self):
         """Prints summary of the results to the terminal"""
-        print('Showing the ' + str(self.number_of_top_results) + ' best matches:')
+        print('Showing the ' + str(self.config.number_of_top_results) + ' best matches:')
         pretty_printer = pprint.PrettyPrinter(width=200)
         pretty_printer.pprint(self.best_matches)
 
@@ -125,9 +144,9 @@ class Hades():
         """
         print('Generating reports...', end='', flush=True)
         separator = '\n' + '-' * 80 + '\n'
-        pathlib.Path(self.reports_dir).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(self.config.reports_dir).mkdir(parents=True, exist_ok=True)
         for idx, (ratio, file_path0, file_path1) in enumerate(self.best_matches):
-            with open(self.reports_dir + '/' + str(idx) + '.txt', 'w') as file:
+            with open(self.config.reports_dir + '/' + str(idx) + '.txt', 'w') as file:
                 file.write('Match ratio: ' + str(ratio) + '\n')
                 file.write('File 0: ' + file_path0 + '\n')
                 file.write('File 1: ' + file_path1 + '\n')
@@ -137,7 +156,7 @@ class Hades():
                 file.write(separator)
                 with open(file_path1, 'r') as file1:
                     file.write(file1.read())
-        print(' Reports written to ' + self.reports_dir + '/')
+        print(' Reports written to ' + self.config.reports_dir + '/')
 
 if __name__ == '__main__':
     main()
