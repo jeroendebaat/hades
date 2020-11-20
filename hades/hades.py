@@ -11,16 +11,15 @@ import os
 import pathlib
 import pprint
 import tqdm
+import yaml
 
 import istarmap
 
 def main():
-    dir_name = './'
-    number_of_top_results = 20
-    reports_dir = 'reports'
-    number_of_processes = 2
+    with open ('python.yaml', 'r') as file:
+        config = yaml.safe_load(file)
 
-    hades = Hades(dir_name, number_of_top_results, reports_dir, number_of_processes)
+    hades = Hades(config)
     hades.run_plagiarism_check()
 
 class Hades():
@@ -30,11 +29,14 @@ class Hades():
     __junk_function1 = lambda c: c.isspace()
     __ratios: List[tuple] = []
 
-    def __init__(self, dir_name, number_of_top_results, reports_dir, number_of_processes):
-        self.dir_name = dir_name
-        self.number_of_top_results = number_of_top_results
-        self.reports_dir = reports_dir
-        self.number_of_processes = number_of_processes
+    def __init__(self, config):
+        self.file_extensions = config['file_extensions']
+
+        self.dir_name = config['dir_name']
+        self.number_of_top_results = config['number_of_top_results']
+        self.reports_dir = config['reports_dir']
+        self.number_of_processes = config['number_of_processes']
+
         self.best_matches = []
 
         self.__get_list_of_files()
@@ -45,7 +47,13 @@ class Hades():
         self.__file_paths = []
         for (dirpath, _, filenames) in os.walk(self.dir_name):
             self.__file_paths += [os.path.join(dirpath, file)
-                                for file in filenames if file.endswith('.py')]
+                                for file in filenames if self.__file_satisfies_conditions(file)]
+
+    def __file_satisfies_conditions(self, file_name):
+        for file_extension in self.file_extensions:
+            if file_name.endswith(file_extension):
+                return True
+        return False
 
     def __file_paths_to_strings(self):
         """Reads the files indicates by file_paths into a list of strings"""
