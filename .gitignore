@@ -1,5 +1,6 @@
 # Test set folder and default output folder
 testset/
+testsetpdf/
 reports/
 
 # Vim swap files
