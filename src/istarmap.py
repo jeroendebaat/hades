@@ -1,7 +1,8 @@
-# istarmap.py for Python 3.8+
-# Source: https://stackoverflow.com/questions/57354700/starmap-combined-with-tqdm
+"""
+istarmap.py for Python 3.8+
+Source: https://stackoverflow.com/questions/57354700/starmap-combined-with-tqdm
+"""
 import multiprocessing.pool as mpp
-
 
 def istarmap(self, func, iterable, chunksize=1):
     """starmap-version of imap

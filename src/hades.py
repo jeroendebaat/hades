@@ -7,6 +7,7 @@ from multiprocessing import Pool
 from typing import List
 
 from dataclasses import dataclass
+import argparse
 import itertools
 import math
 import os
@@ -15,7 +16,7 @@ import pprint
 import tqdm
 import yaml
 
-from tika import parser
+from tika import parser as tika_parser
 import istarmap
 
 @dataclass
@@ -27,9 +28,19 @@ class Configuration():
     reports_dir: str
     number_of_processes: int
 
+def parse_arguments():
+    """Parse command line arguments and return the appropriate Configuration"""
+    parser = argparse.ArgumentParser()
+    parser.add_argument('config_file_path')
+    args = parser.parse_args()
+    return read_configuration_from_file(args.config_file_path)
+
 def main():
-    """Reads a configuration from file and run the plagiarism checker"""
-    config = read_configuration_from_file('pdf.yaml')
+    """
+    Get the Configuration from command line arguments,
+    and run the plagiarism checker
+    """
+    config = parse_arguments()
     hades = Hades(config)
     hades.run_plagiarism_check()
 
@@ -80,7 +91,7 @@ class Hades():
         self.__strings = []
         for file_path in self.__file_paths:
             if file_path.endswith('.pdf'):
-                file_contents = parser.from_file(file_path)['content']
+                file_contents = tika_parser.from_file(file_path)['content']
             else:
                 with open(file_path, 'r') as file:
                     file_contents = file.read()
@@ -161,7 +172,7 @@ class Hades():
 
                 # TODO: Not the most efficient implementation.
                 if file_path0.endswith('.pdf'):
-                    file_contents = parser.from_file(file_path0)['content'].strip()
+                    file_contents = tika_parser.from_file(file_path0)['content'].strip()
                     file.write(file_contents)
                 else:
                     with open(file_path0, 'r') as file0:
@@ -170,7 +181,7 @@ class Hades():
                 file.write(separator)
 
                 if file_path1.endswith('.pdf'):
-                    file_contents = parser.from_file(file_path1)['content'].strip()
+                    file_contents = tika_parser.from_file(file_path1)['content'].strip()
                     file.write(file_contents)
                 else:
                     with open(file_path1, 'r') as file1:
