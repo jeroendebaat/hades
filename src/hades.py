@@ -79,7 +79,7 @@ class Hades():
         self.__strings = []
         for file_path in self.__file_paths:
             with open(file_path, 'r') as file:
-                self.__strings.append(file.read().replace('\n', ''))
+                self.__strings.append(file.read().replace('\n', '')) # TODO: Make this processing step an option
 
     def run_plagiarism_check(self):
         """
