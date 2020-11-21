@@ -2,6 +2,4 @@ dir_name: './'
 number_of_top_results: 20
 reports_dir: 'reports'
 number_of_processes: 2
-
-extensions:
-  - .py
+file_extensions: [.py]
