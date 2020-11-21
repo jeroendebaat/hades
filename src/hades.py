@@ -15,6 +15,7 @@ import pprint
 import tqdm
 import yaml
 
+from tika import parser
 import istarmap
 
 @dataclass
@@ -28,7 +29,7 @@ class Configuration():
 
 def main():
     """Reads a configuration from file and run the plagiarism checker"""
-    config = read_configuration_from_file('python.yaml')
+    config = read_configuration_from_file('pdf.yaml')
     hades = Hades(config)
     hades.run_plagiarism_check()
 
@@ -78,8 +79,14 @@ class Hades():
         """Reads the files indicates by file_paths into a list of strings"""
         self.__strings = []
         for file_path in self.__file_paths:
-            with open(file_path, 'r') as file:
-                self.__strings.append(file.read().replace('\n', '')) # TODO: Make this processing step an option
+            if file_path.endswith('.pdf'):
+                file_contents = parser.from_file(file_path)['content']
+            else:
+                with open(file_path, 'r') as file:
+                    file_contents = file.read()
+                    # TODO: Make this processing step an option
+                    file_contents = file_contents.replace('\n', '')
+            self.__strings.append(file_contents)
 
     def run_plagiarism_check(self):
         """
@@ -151,11 +158,23 @@ class Hades():
                 file.write('File 0: ' + file_path0 + '\n')
                 file.write('File 1: ' + file_path1 + '\n')
                 file.write(separator)
-                with open(file_path0, 'r') as file0:
-                    file.write(file0.read())
+
+                # TODO: Not the most efficient implementation.
+                if file_path0.endswith('.pdf'):
+                    file_contents = parser.from_file(file_path0)['content'].strip()
+                    file.write(file_contents)
+                else:
+                    with open(file_path0, 'r') as file0:
+                        file.write(file0.read())
+
                 file.write(separator)
-                with open(file_path1, 'r') as file1:
-                    file.write(file1.read())
+
+                if file_path1.endswith('.pdf'):
+                    file_contents = parser.from_file(file_path1)['content'].strip()
+                    file.write(file_contents)
+                else:
+                    with open(file_path1, 'r') as file1:
+                        file.write(file1.read())
         print(' Reports written to ' + self.config.reports_dir + '/')
 
 if __name__ == '__main__':
